@@ -1,0 +1,6 @@
+[
+  { "path": "/", "title": "TypeGiggle - Fun Typing Test", "description": "Test your WPM and accuracy." },
+  { "path": "/leaderboard", "title": "Global Leaderboard | TypeGiggle", "description": "See the fastest typists." },
+  { "path": "/blog", "title": "Typing Blog | TypeGiggle", "description": "Learn how to type faster." },
+  { "path": "/about", "title": "About | TypeGiggle", "description": "Learn about our mission." }
+]

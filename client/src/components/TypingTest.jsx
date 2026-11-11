@@ -76,29 +76,6 @@ export default function TypingTest() {
     }
   }, [mode]);
 
-  // KEYBIND LISTENER
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Prevent Tab from navigating to links
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        resetTest();
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        resetTest();
-      }
-      // Handle Enter restart only if not currently typing
-      if (e.key === 'Enter' && !isActive) {
-        e.preventDefault();
-        resetTest();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isActive]);
-
   const generateWords = (time, usePunctuation, useNumbers) => {
     const newWords = [];
     for (let i = 0; i < 500; i++) {
@@ -162,11 +139,8 @@ export default function TypingTest() {
 
     if (newTyped.length > 0 && newTyped[newTyped.length - 1] === ' ') {
       const activeChar = document.getElementById(`char-${newTyped.length}`);
-      if (activeChar && wordsContainerRef.current) {
-        const container = wordsContainerRef.current;
-        if (activeChar.offsetTop > 60) {
-          container.scrollTop = activeChar.offsetTop - 60;
-        }
+      if (activeChar) {
+        activeChar.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
     }
 
@@ -250,6 +224,7 @@ export default function TypingTest() {
     }
     setConsistency(calcConsistency);
 
+    // 1. If logged in, save score normally
     if (token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/save-score`, {
         wpm: finalWpm, rawWpm: finalRawWpm, consistency: calcConsistency, accuracy: finalAcc,
@@ -257,6 +232,13 @@ export default function TypingTest() {
       }, {
         headers: { Authorization: token }
       }).catch(err => console.error("Failed to save score", err));
+    } 
+    // 2. If NOT logged in, track as a guest for global stats
+    else if (!token && finalWpm > 0) {
+      axios.post(`${import.meta.env.VITE_API_URL}/api/auth/track-guest`, {
+        wpm: finalWpm,
+        seconds: Math.round(secondsSpent)
+      }).catch(err => console.error("Failed to track guest", err));
     }
   };
 
@@ -363,7 +345,8 @@ export default function TypingTest() {
       {/* Results Screen */}
       {showResults && (
         <div className="w-full animate-fade-in flex flex-col items-center">
-          <div className="flex flex-col md:flex-row justify-between items-center w-full mb-12 gap-8 px-4 md:px-0">
+          
+          <div className="flex flex-col md:flex-row justify-between items-center w-full mb-8 gap-8 px-4 md:px-0">
             <div className="flex gap-12">
               <div>
                 <p className="text-sm font-bold mb-1" style={{ color: 'var(--sub-color)' }}>wpm</p>
@@ -395,7 +378,13 @@ export default function TypingTest() {
             </div>
           </div>
 
-          <div className="w-full h-[300px] mb-12 px-4 md:px-0">
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
+            <button onClick={() => resetTest()} className="px-6 py-3 rounded-xl font-bold border border-white/10 hover:bg-white/5 transition-colors flex items-center gap-2" style={{ color: 'var(--text-color)' }}>
+              <RotateCcw size={18} /> Restart
+            </button>
+          </div>
+
+          <div className="w-full h-[250px] md:h-[300px] mb-12 px-4 md:px-0">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={wpmHistory}>
                 <XAxis dataKey="time" stroke="var(--sub-color)" tick={{fill: 'var(--sub-color)', fontSize: 12}} axisLine={false} tickLine={false} />
@@ -408,19 +397,10 @@ export default function TypingTest() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-
-          <div className="flex gap-4 mb-16">
-            <button onClick={() => resetTest()} className="px-8 py-3 rounded-xl font-bold border border-white/10 hover:bg-white/5 transition-colors" style={{ color: 'var(--text-color)' }}>
-              Restart
-            </button>
-            <button onClick={() => resetTest()} className="px-8 py-3 rounded-xl font-bold bg-[var(--main-color)] text-[var(--bg-color)] hover:scale-105 transition-transform">
-              Next Test
-            </button>
-          </div>
         </div>
       )}
 
-      {/* --- FOOTER (ONLY SHOWS ON HOMEPAGE) --- */}
+      {/* Footer */}
       <footer className="w-full border-t py-8 mt-16 flex flex-col items-center justify-center gap-6" style={{ borderColor: 'var(--sub-color)' }}>
         <div className="flex flex-wrap justify-center items-center gap-4 text-xs font-mono" style={{ color: 'var(--sub-color)' }}>
           <span><kbd className="px-2 py-1 rounded bg-black/10 border border-black/10">tab</kbd> + <kbd className="px-2 py-1 rounded bg-black/10 border border-black/10">enter</kbd> - restart test</span>

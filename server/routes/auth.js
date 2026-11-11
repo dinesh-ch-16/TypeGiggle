@@ -4,8 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const User = require('../models/User');
+const SiteStats = require('../models/SiteStats'); // <-- ADDED
 
-// Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // REGISTER
@@ -39,7 +39,6 @@ router.post('/register', async (req, res) => {
       await user.save();
     }
 
-    // Send Email via Resend
     try {
       await resend.emails.send({
         from: 'TypeGiggle <onboarding@resend.dev>',
@@ -116,6 +115,29 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// HELPER: Update Global Site Stats
+const updateSiteStats = async (wpm, seconds) => {
+  try {
+    let stats = await SiteStats.findOne();
+    if (!stats) {
+      stats = new SiteStats();
+    }
+    
+    stats.totalTestsStarted += 1;
+    stats.totalTestsCompleted += 1;
+    stats.totalSecondsTyped += seconds;
+
+    let bucketIndex = Math.floor(wpm / 10);
+    if (bucketIndex >= 30) bucketIndex = 29;
+    if (bucketIndex >= 0) stats.wpmDistribution[bucketIndex] += 1;
+
+    await stats.save();
+  } catch (err) {
+    console.error("Failed to update site stats", err);
+  }
+};
+
+// SAVE SCORE (For Logged-in Users)
 router.post('/save-score', verifyToken, async (req, res) => {
   try {
     const { wpm, rawWpm, consistency, accuracy, mode } = req.body;
@@ -124,8 +146,23 @@ router.post('/save-score', verifyToken, async (req, res) => {
     
     user.history.push({ wpm, rawWpm, consistency, accuracy, mode });
     await user.save();
-    
+
+    // Update global stats too
+    const seconds = parseInt(mode) || 30;
+    await updateSiteStats(wpm, seconds);
+
     res.status(200).json({ message: 'Score saved' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// TRACK GUEST SCORE (For Users NOT Logged In)
+router.post('/track-guest', async (req, res) => {
+  try {
+    const { wpm, seconds } = req.body;
+    await updateSiteStats(wpm, seconds);
+    res.status(200).json({ message: 'Guest score tracked' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -175,29 +212,25 @@ router.get('/me', verifyToken, async (req, res) => {
   }
 });
 
+// GET SITE STATS (Now reads from global counter)
 router.get('/stats', async (req, res) => {
   try {
-    const users = await User.find({}, 'history');
-    let totalTests = 0, totalSeconds = 0, wpmDistribution = Array(30).fill(0);
+    const stats = await SiteStats.findOne();
+    
+    if (!stats) {
+      return res.json({ totalTests: 0, totalHours: "0.00", chartData: [] });
+    }
 
-    users.forEach(user => {
-      if (user.history && user.history.length > 0) {
-        user.history.forEach(test => {
-          totalTests++;
-          totalSeconds += 30; 
-          let bucketIndex = Math.floor(test.wpm / 10);
-          if (bucketIndex >= 30) bucketIndex = 29; 
-          wpmDistribution[bucketIndex]++;
-        });
-      }
-    });
-
-    const chartData = wpmDistribution.map((count, index) => ({
+    const chartData = stats.wpmDistribution.map((count, index) => ({
       range: `${index * 10}-${index * 10 + 9}`,
       users: count
     })).filter(data => data.users > 0);
 
-    res.json({ totalTests, totalHours: (totalSeconds / 3600).toFixed(2), chartData });
+    res.json({ 
+      totalTests: stats.totalTestsCompleted, 
+      totalHours: (stats.totalSecondsTyped / 3600).toFixed(2), 
+      chartData 
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

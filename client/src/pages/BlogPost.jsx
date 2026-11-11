@@ -1,407 +1,308 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import SEO from '../components/SEO';
-
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Share2,
-  Copy,
-  Check,
-  MessageCircle,
-  ExternalLink
-} from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Share2, Copy, Check, MessageCircle, ExternalLink, List, ArrowRight } from 'lucide-react';
 
 export default function BlogPost() {
   const { slug } = useParams();
-
   const [content, setContent] = useState(null);
   const [meta, setMeta] = useState({});
   const [copied, setCopied] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [headings, setHeadings] = useState([]);
+  const [otherPosts, setOtherPosts] = useState([]);
 
-  // Load Markdown blog posts
   useEffect(() => {
-    const modules = import.meta.glob('../blog/*.md', {
-      query: '?raw',
-      import: 'default',
-      eager: true
-    });
+    // THE FIX: Scroll to top instantly when the slug changes
+    window.scrollTo(0, 0);
 
+    const modules = import.meta.glob('../blog/*.md', { query: '?raw', import: 'default', eager: true });
     const path = `../blog/${slug}.md`;
-
-    // Reset states when slug changes
+    
     setContent(null);
     setMeta({});
     setNotFound(false);
     setCopied(false);
+    setHeadings([]);
+    setOtherPosts([]);
 
     if (modules[path]) {
       const rawContent = modules[path];
-
-      // Extract frontmatter
       const frontmatterRegex = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/;
       const match = rawContent.match(frontmatterRegex);
-
+      
       let parsedMeta = {};
       let parsedContent = rawContent;
 
       if (match) {
         const yaml = match[1];
-
-        parsedContent = rawContent
-          .replace(frontmatterRegex, '')
-          .trim();
-
+        parsedContent = rawContent.replace(frontmatterRegex, '').trim();
+        
         yaml.split('\n').forEach(line => {
           const colonIndex = line.indexOf(':');
-
           if (colonIndex !== -1) {
             const key = line.slice(0, colonIndex).trim();
-
             let value = line.slice(colonIndex + 1).trim();
-
-            // Remove surrounding quotes
-            value = value.replace(/^["'](.*)["']$/, '$1');
-
+            value = value.replace(/^["'](.*)["']$/, '$1'); 
             parsedMeta[key] = value;
           }
         });
       }
 
+      const headingRegex = /^(##|###)\s+(.*)$/gm;
+      let headingMatch;
+      const extractedHeadings = [];
+      while ((headingMatch = headingRegex.exec(parsedContent)) !== null) {
+        extractedHeadings.push({
+          level: headingMatch[1].length,
+          text: headingMatch[2],
+          id: headingMatch[2].toLowerCase().replace(/[^\w]+/g, '-')
+        });
+      }
+
+      setHeadings(extractedHeadings);
       setContent(parsedContent);
       setMeta(parsedMeta);
+
+      // Load other posts
+      const allPosts = Object.entries(modules).map(([p, raw]) => {
+        const postSlug = p.replace('../blog/', '').replace('.md', '');
+        const fmMatch = raw.match(frontmatterRegex);
+        let data = {};
+        if (fmMatch) {
+          fmMatch[1].split('\n').forEach(line => {
+            const idx = line.indexOf(':');
+            if (idx !== -1) {
+              const k = line.slice(0, idx).trim();
+              let v = line.slice(idx + 1).trim().replace(/^["'](.*)["']$/, '$1');
+              data[k] = v;
+            }
+          });
+        }
+        return { slug: postSlug, title: data.title, excerpt: data.excerpt, image: data.image, date: data.date, readTime: Math.ceil(raw.split(/\s+/).length / 200) };
+      });
+      
+      const filtered = allPosts.filter(p => p.slug !== slug && p.title).slice(0, 3);
+      setOtherPosts(filtered);
+
     } else {
       setNotFound(true);
     }
   }, [slug]);
 
-  // Calculate reading time
-  const wordCount = content
-    ? content.trim().split(/\s+/).filter(Boolean).length
-    : 0;
-
+  const wordCount = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 200));
+  const heroImage = meta.image || 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
 
-  // Hero image
-  const heroImage =
-    meta.image ||
-    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
-
-  // Article sharing details
-  const shareUrl =
-    typeof window !== 'undefined' ? window.location.href : '';
-
-  const shareTitle = meta.title || 'TypeGiggle Blog';
-
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
   const encodedUrl = encodeURIComponent(shareUrl);
-  const encodedTitle = encodeURIComponent(shareTitle);
+  const encodedTitle = encodeURIComponent(meta.title || 'TypeGiggle Blog');
 
-  // Copy article link
   const copyArticleLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (error) { console.error(error); }
+  };
 
-      setTimeout(() => {
-        setCopied(false);
-      }, 2500);
-    } catch (error) {
-      console.error('Unable to copy article link:', error);
+  const handleTocClick = (e, id) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      const yOffset = -100;
+      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 
-  // Native mobile sharing
-  const nativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          url: shareUrl
-        });
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Sharing failed:', error);
-        }
-      }
-    }
-  };
-
-  // Loading state
-  if (!content && !notFound) {
-    return (
-      <div
-        className="text-center py-20"
-        style={{ color: 'var(--text-color)' }}
-      >
-        Loading article...
-      </div>
-    );
-  }
-
-  // Article not found
-  if (notFound) {
-    return (
-      <div
-        className="min-h-[60vh] flex flex-col items-center justify-center text-center px-6"
-        style={{ color: 'var(--text-color)' }}
-      >
-        <h1 className="text-3xl font-extrabold mb-4">
-          Article Not Found
-        </h1>
-
-        <p
-          className="mb-8"
-          style={{ color: 'var(--sub-color)' }}
-        >
-          Sorry, the article you are looking for does not exist.
-        </p>
-
-        <Link
-          to="/blog"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold"
-          style={{
-            backgroundColor: 'var(--main-color)',
-            color: '#171717'
-          }}
-        >
-          <ArrowLeft size={18} />
-          Back to Blog
-        </Link>
-      </div>
-    );
-  }
+  if (!content && !notFound) return <div className="text-center py-20 text-white">Loading article...</div>;
+  if (notFound) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-6 text-white">
+      <h1 className="text-4xl font-extrabold mb-4">Article Not Found</h1>
+      <Link to="/blog" className="px-6 py-3 rounded-xl font-bold bg-[var(--main-color)] text-black">Back to Blog</Link>
+    </div>
+  );
 
   return (
     <div className="w-full animate-fade-in pb-20">
-
-      {/* SEO */}
-      <SEO
-        title={meta.title || 'Blog Post'}
-        description={meta.excerpt || ''}
-      />
-
-      {/* Hero Header */}
-      <div className="relative w-full h-[50vh] md:h-[60vh] flex items-end justify-center pb-12 overflow-hidden">
-
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src={heroImage}
-            alt={meta.title || 'TypeGiggle article cover'}
-            className="w-full h-full object-cover"
-            fetchPriority="high"
-          />
-
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-color)] via-[var(--bg-color)]/80 to-transparent"></div>
-        </div>
-
-        {/* Title Content */}
-        <div className="relative z-10 w-full max-w-4xl mx-auto px-6 text-center animate-fade-in-up">
-
-          <Link
-            to="/blog"
-            className="inline-flex items-center gap-2 mb-6 text-sm font-bold hover:underline px-4 py-2 rounded-full backdrop-blur-md"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              color: 'var(--text-color)'
-            }}
-          >
-            <ArrowLeft size={16} />
-            Back to all articles
-          </Link>
-
-          <h1
-            className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight text-white drop-shadow-lg"
-            style={{
-              textShadow: '0 4px 20px rgba(0,0,0,0.8)'
-            }}
-          >
-            {meta.title}
-          </h1>
-
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-bold text-white/80">
-
-            {meta.date && (
-              <span className="flex items-center gap-2">
-                <Calendar size={16} />
-                {meta.date}
-              </span>
-            )}
-
-            <span className="flex items-center gap-2">
-              <Clock size={16} />
-              {readTime} min read
-            </span>
-
-          </div>
-        </div>
-      </div>
-
-      {/* Article Content */}
-      <div className="w-full max-w-3xl mx-auto px-6 relative z-10 -mt-8">
-
-        <div className="prose prose-invert prose-lg max-w-none
-          prose-headings:text-[var(--text-color)]
-          prose-h2:border-b
-          prose-h2:border-white/10
-          prose-h2:pb-2
-          prose-a:text-[var(--main-color)]
-          prose-img:rounded-2xl
-          prose-img:shadow-2xl
-          prose-blockquote:border-l-[var(--main-color)]
-          prose-blockquote:bg-white/5
-          prose-blockquote:py-2
-          prose-blockquote:px-6
-          prose-blockquote:rounded-r-lg
-        ">
-
-          <ReactMarkdown
-            components={{
-              // External links open in a new tab
-              a: ({ href, children, ...props }) => {
-                const isExternal = href?.startsWith('http');
-
-                return (
-                  <a
-                    href={href}
-                    {...props}
-                    target={isExternal ? '_blank' : undefined}
-                    rel={isExternal ? 'noopener noreferrer' : undefined}
-                  >
-                    {children}
-                  </a>
-                );
-              },
-
-              // Responsive article images
-              img: ({ src, alt }) => (
-                <img
-                  src={src}
-                  alt={alt || 'TypeGiggle blog illustration'}
-                  loading="lazy"
-                  className="w-full rounded-2xl shadow-2xl my-8"
-                />
-              )
-            }}
-          >
-            {content}
-          </ReactMarkdown>
-
-        </div>
-      </div>
-
-      {/* Social Sharing Section */}
-      <div className="max-w-3xl mx-auto px-6 mt-12">
-
-        <div className="border-t border-white/10 pt-8">
-
-          <h3
-            className="text-xl font-bold mb-5 flex items-center gap-2"
-            style={{ color: 'var(--text-color)' }}
-          >
-            <Share2 size={20} style={{ color: 'var(--main-color)' }} />
-            Enjoyed this article? Share it!
-          </h3>
-
-          <div className="flex flex-wrap items-center gap-3">
-
-            {/* WhatsApp */}
-            <a
-              href={`https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on WhatsApp"
-              className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
-              style={{ color: 'var(--text-color)' }}
-            >
-              <MessageCircle size={18} />
-              WhatsApp
-            </a>
-
-            {/* LinkedIn */}
-            <a
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on LinkedIn"
-              className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
-              style={{ color: 'var(--text-color)' }}
-            >
-              <Share2 size={18} />
-              LinkedIn
-            </a>
-
-            {/* X */}
-            <a
-              href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Share on X"
-              className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
-              style={{ color: 'var(--text-color)' }}
-            >
-              <ExternalLink size={18} />
-              X
-            </a>
-
-            {/* Copy Link */}
-            <button
-              onClick={copyArticleLink}
-              className="px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
-              style={{ color: 'var(--text-color)' }}
-            >
-              {copied ? (
-                <Check size={18} />
-              ) : (
-                <Copy size={18} />
-              )}
-
-              {copied ? 'Copied!' : 'Copy Link'}
-            </button>
-
-            {/* Native Share */}
-            {typeof navigator !== 'undefined' && navigator.share && (
-              <button
-                onClick={nativeShare}
-                className="px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center gap-2"
-                style={{ color: 'var(--text-color)' }}
-              >
-                <ExternalLink size={18} />
-                More
-              </button>
-            )}
-
-          </div>
-
-          <p
-            className="text-sm mt-5"
-            style={{ color: 'var(--sub-color)' }}
-          >
-            Help others discover useful typing tips by sharing this guide.
-          </p>
-
-        </div>
-      </div>
-
-      {/* Back to Blog */}
-      <div className="max-w-3xl mx-auto px-6 mt-12">
-
-        <Link
-          to="/blog"
-          className="inline-flex items-center gap-2 font-bold hover:gap-3 transition-all"
-          style={{ color: 'var(--main-color)' }}
-        >
-          <ArrowLeft size={18} />
-          Explore More Articles
+      <SEO title={meta.title || 'Blog Post'} description={meta.excerpt || ''} />
+      
+      {/* Editorial Header */}
+      <div className="max-w-7xl mx-auto px-6 pt-12 pb-16">
+        <Link to="/blog" className="inline-flex items-center gap-2 mb-8 text-sm font-bold text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft size={16} /> Back to Journal
         </Link>
+        
+        <div className="flex flex-col lg:flex-row gap-12 items-center">
+          <div className="w-full lg:w-1/2 flex flex-col justify-center">
+            <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-wider mb-6 text-[var(--main-color)]">
+              <span>Typing Guide</span>
+              <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+              <span className="flex items-center gap-1"><Calendar size={14} /> {meta.date}</span>
+              <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+              <span className="flex items-center gap-1"><Clock size={14} /> {readTime} min read</span>
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-[1.1] mb-6 text-white">
+              {meta.title}
+            </h1>
+            
+            <p className="text-xl leading-relaxed mb-8 text-gray-300">
+              {meta.excerpt}
+            </p>
+            
+            <div className="flex items-center gap-4 border-t border-white/10 pt-6">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg bg-[var(--main-color)] text-black">T</div>
+              <div>
+                <p className="font-bold text-sm text-white">TypeGiggle Team</p>
+                <p className="text-xs text-gray-400">Editorial</p>
+              </div>
+            </div>
+          </div>
 
+          <div className="w-full lg:w-1/2">
+            <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl">
+              <img src={heroImage} alt={meta.title} className="w-full h-full object-cover" />
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-12 items-start">
+          
+          {/* Sticky Table of Contents */}
+          <aside className="hidden lg:block sticky top-28">
+            <h4 className="text-xs font-bold uppercase tracking-wider mb-4 text-gray-400 flex items-center gap-2">
+              <List size={14} /> Table of Contents
+            </h4>
+            <nav className="flex flex-col gap-3 border-l border-white/10">
+              {headings.map((heading, idx) => (
+                <a 
+                  key={idx} 
+                  href={`#${heading.id}`}
+                  onClick={(e) => handleTocClick(e, heading.id)}
+                  className={`text-sm text-gray-400 hover:text-[var(--main-color)] transition-colors pl-4 border-l-2 -ml-[1px] ${heading.level === 3 ? 'ml-4 text-xs' : ''}`}
+                  style={{ borderColor: 'transparent' }}
+                >
+                  {heading.text}
+                </a>
+              ))}
+            </nav>
+            
+            <div className="mt-10 pt-6 border-t border-white/10">
+              <h4 className="text-xs font-bold uppercase tracking-wider mb-4 text-gray-400">Share this story</h4>
+              <button onClick={copyArticleLink} className="flex items-center gap-2 text-sm font-bold text-white hover:text-[var(--main-color)] transition-opacity">
+                {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Link Copied!' : 'Copy Link'}
+              </button>
+            </div>
+          </aside>
+
+          {/* Article Content & Bottom Sections */}
+          <div className="w-full max-w-3xl">
+            <div className="prose prose-lg max-w-none 
+              prose-headings:font-serif prose-headings:font-bold prose-headings:text-white
+              prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-lg
+              prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:border-b prose-h2:border-white/10 prose-h2:pb-2
+              prose-h3:text-2xl prose-h3:mt-8 prose-h3:mb-4
+              prose-a:text-[var(--main-color)] prose-a:no-underline hover:prose-a:underline
+              prose-img:rounded-xl prose-img:shadow-md
+              prose-blockquote:border-l-4 prose-blockquote:border-[var(--main-color)] prose-blockquote:bg-white/5 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:text-gray-300 prose-blockquote:italic
+              prose-strong:text-white
+              prose-table:border-collapse prose-table:w-full prose-table:my-8
+              prose-th:bg-white/5 prose-th:p-4 prose-th:text-left prose-th:text-white prose-th:border prose-th:border-white/10
+              prose-td:p-4 prose-td:text-gray-300 prose-td:border prose-td:border-white/10
+              prose-ul:text-gray-300 prose-li:text-gray-300
+            ">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h2: ({ children, ...props }) => {
+                    const id = children.toString().toLowerCase().replace(/[^\w]+/g, '-');
+                    return <h2 id={id} className="scroll-mt-32" {...props}>{children}</h2>;
+                  },
+                  h3: ({ children, ...props }) => {
+                    const id = children.toString().toLowerCase().replace(/[^\w]+/g, '-');
+                    return <h3 id={id} className="scroll-mt-32" {...props}>{children}</h3>;
+                  },
+                  a: ({ href, children, ...props }) => (
+                    <a href={href} {...props} target={href?.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">{children}</a>
+                  ),
+                  img: ({ src, alt }) => (
+                    <img src={src} alt={alt || 'Blog image'} loading="lazy" className="w-full rounded-xl shadow-md my-8 object-cover" />
+                  )
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
+
+            {/* Premium Share Section */}
+            <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div>
+                <h3 className="text-xl font-bold mb-2 flex items-center gap-2 text-white">
+                  <Share2 size={20} className="text-[var(--main-color)]" /> Enjoyed this article?
+                </h3>
+                <p className="text-sm text-gray-400">Help others discover useful typing tips.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <a href={`https://api.whatsapp.com/send?text=${encodedTitle}%20${encodedUrl}`} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-[var(--main-color)] hover:text-black transition-all flex items-center justify-center">
+                  <MessageCircle size={20} />
+                </a>
+                <a href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`} target="_blank" rel="noopener noreferrer" className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-[var(--main-color)] hover:text-black transition-all flex items-center justify-center">
+                  <ExternalLink size={20} />
+                </a>
+                <button onClick={copyArticleLink} className="p-3 rounded-full bg-white/5 border border-white/10 hover:bg-[var(--main-color)] hover:text-black transition-all flex items-center justify-center">
+                  {copied ? <Check size={20} /> : <Copy size={20} />}
+                </button>
+              </div>
+            </div>
+
+            {/* PREMIUM "READ NEXT" SECTION */}
+            {otherPosts.length > 0 && (
+              <div className="mt-20 pt-12 border-t border-white/10">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-3xl font-serif font-bold text-white">Keep Reading</h3>
+                  <Link to="/blog" className="text-sm font-bold text-[var(--main-color)] hover:underline flex items-center gap-1">
+                    View all <ArrowRight size={14} />
+                  </Link>
+                </div>
+                
+                <div className="flex flex-col gap-8">
+                  {otherPosts.map((post) => (
+                    <Link key={post.slug} to={`/blog/${post.slug}`} className="group flex flex-col md:flex-row gap-6 items-center">
+                      {post.image && (
+                        <div className="w-full md:w-1/3 aspect-[4/3] rounded-2xl overflow-hidden shadow-lg flex-shrink-0">
+                          <img src={post.image} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        </div>
+                      )}
+                      <div className="w-full md:w-2/3">
+                        <p className="text-xs font-bold text-[var(--main-color)] mb-2 uppercase tracking-wider">
+                          {post.date} <span className="mx-2 text-gray-600">•</span> {post.readTime} min read
+                        </p>
+                        <h4 className="text-2xl font-serif font-bold text-white mb-3 leading-snug group-hover:text-[var(--main-color)] transition-colors">
+                          {post.title}
+                        </h4>
+                        <p className="text-sm text-gray-400 line-clamp-2 mb-4">
+                          {post.excerpt}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm font-bold text-white group-hover:gap-3 transition-all">
+                          Read Article <ArrowRight size={16} className="text-[var(--main-color)]" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { RotateCcw, Mail, Heart, Shield } from 'lucide-react';
 import { FaDiscord, FaXTwitter } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
 import SEO from './SEO';
 
 export default function TypingTest() {
@@ -410,11 +409,11 @@ export default function TypingTest() {
         <div className="w-full max-w-4xl h-[1px] mx-auto" style={{ backgroundColor: 'var(--sub-color)', opacity: 0.3 }}></div>
 
         <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-sm font-bold" style={{ color: 'var(--sub-color)' }}>
-          <Link to="/about" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Mail size={16} /> contact</Link>
+          <a href="mailto:contact@typegiggle.com" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Mail size={16} /> contact</a>
           <a href="https://x.com/TypeGiggle" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><FaXTwitter size={16} /> twitter</a>
           <a href="https://discord.gg/bP4RpvtzM" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><FaDiscord size={16} /> discord</a>
-          <Link to="/about" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Heart size={16} /> support</Link>
-          <Link to="/privacy-policy" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Shield size={16} /> privacy</Link>
+          <a href="mailto:support@typegiggle.com" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Heart size={16} /> support</a>
+          <a href="/privacy-policy" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Shield size={16} /> privacy</a>
         </div>
 
         <p className="text-xs" style={{ color: 'var(--sub-color)' }}>

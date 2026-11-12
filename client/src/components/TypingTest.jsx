@@ -409,11 +409,43 @@ export default function TypingTest() {
         <div className="w-full max-w-4xl h-[1px] mx-auto" style={{ backgroundColor: 'var(--sub-color)', opacity: 0.3 }}></div>
 
         <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-sm font-bold" style={{ color: 'var(--sub-color)' }}>
-          <a href="mailto:contact@typegiggle.com" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Mail size={16} /> contact</a>
-          <a href="https://x.com/TypeGiggle" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><FaXTwitter size={16} /> twitter</a>
-          <a href="https://discord.gg/bP4RpvtzM" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><FaDiscord size={16} /> discord</a>
-          <a href="mailto:support@typegiggle.com" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Heart size={16} /> support</a>
-          <a href="/privacy-policy" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2"><Shield size={16} /> privacy</a>
+          
+          {/* CONTACT BUTTON - Copies email to clipboard */}
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText('contact@typegiggle.com');
+              alert('Email copied to clipboard: contact@typegiggle.com');
+            }} 
+            className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
+            style={{ color: 'var(--sub-color)' }}
+          >
+            <Mail size={16} /> contact
+          </button>
+
+          <a href="https://x.com/TypeGiggle" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2">
+            <FaXTwitter size={16} /> twitter
+          </a>
+          
+          <a href="https://discord.gg/bP4RpvtzM" target="_blank" rel="noreferrer" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2">
+            <FaDiscord size={16} /> discord
+          </a>
+
+          {/* SUPPORT BUTTON - Copies email to clipboard */}
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText('support@typegiggle.com');
+              alert('Email copied to clipboard: support@typegiggle.com');
+            }} 
+            className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
+            style={{ color: 'var(--sub-color)' }}
+          >
+            <Heart size={16} /> support
+          </button>
+
+          <a href="/privacy-policy" className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2">
+            <Shield size={16} /> privacy
+          </a>
+          
         </div>
 
         <p className="text-xs" style={{ color: 'var(--sub-color)' }}>

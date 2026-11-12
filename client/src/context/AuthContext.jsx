@@ -10,9 +10,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const verifyUser = async () => {
       if (!token) return;
-      
+
       try {
-        const res = await axios.get('http://localhost:5000/api/auth/me', {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
           headers: { Authorization: token }
         });
         setUser(res.data);

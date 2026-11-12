@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const User = require('../models/User');
-const SiteStats = require('../models/SiteStats'); // <-- ADDED
+const SiteStats = require('../models/SiteStats');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -41,7 +41,7 @@ router.post('/register', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: 'TypeGiggle <onboarding@resend.dev>',
+        from: 'TypeGiggle <noreply@typegiggle.com>', // UPDATED
         to: email,
         subject: 'Verify your TypeGiggle Account',
         html: `
@@ -268,7 +268,7 @@ router.post('/forgot-password', async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: 'TypeGiggle <onboarding@resend.dev>',
+        from: 'TypeGiggle <noreply@typegiggle.com>', // UPDATED
         to: email,
         subject: 'Reset your TypeGiggle Password',
         html: `

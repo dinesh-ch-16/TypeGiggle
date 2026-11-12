@@ -7,7 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { RotateCcw, Mail, Heart, Shield } from 'lucide-react';
 import { FaDiscord, FaXTwitter } from 'react-icons/fa6';
 import SEO from './SEO';
-import ContactModal from './ContactModal'; // <-- Import your modal
+import ContactModal from './ContactModal';
 
 export default function TypingTest() {
   const { token } = useContext(AuthContext);
@@ -227,6 +227,7 @@ export default function TypingTest() {
     }
     setConsistency(calcConsistency);
 
+    // 1. If logged in, save score normally
     if (token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/save-score`, {
         wpm: finalWpm, rawWpm: finalRawWpm, consistency: calcConsistency, accuracy: finalAcc,
@@ -235,6 +236,7 @@ export default function TypingTest() {
         headers: { Authorization: token }
       }).catch(err => console.error("Failed to save score", err));
     } 
+    // 2. If NOT logged in, track as a guest for global stats
     else if (!token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/track-guest`, {
         wpm: finalWpm,
@@ -416,7 +418,6 @@ export default function TypingTest() {
           <button 
             onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
-            style={{ color: 'var(--sub-color)' }}
           >
             <Mail size={16} /> contact
           </button>
@@ -433,7 +434,6 @@ export default function TypingTest() {
           <button 
             onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
-            style={{ color: 'var(--sub-color)' }}
           >
             <Heart size={16} /> support
           </button>

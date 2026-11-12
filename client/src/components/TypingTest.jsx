@@ -7,6 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { RotateCcw, Mail, Heart, Shield } from 'lucide-react';
 import { FaDiscord, FaXTwitter } from 'react-icons/fa6';
 import SEO from './SEO';
+import ContactModal from './ContactModal'; // <-- Import your modal
 
 export default function TypingTest() {
   const { token } = useContext(AuthContext);
@@ -36,6 +37,9 @@ export default function TypingTest() {
   const [incorrectChars, setIncorrectChars] = useState(0);
   const [wpmHistory, setWpmHistory] = useState([]);
   const [zenTimeElapsed, setZenTimeElapsed] = useState(0);
+
+  // State for the modal
+  const [isContactOpen, setIsContactOpen] = useState(false);
 
   const inputRef = useRef(null);
   const timerRef = useRef(null);
@@ -223,7 +227,6 @@ export default function TypingTest() {
     }
     setConsistency(calcConsistency);
 
-    // 1. If logged in, save score normally
     if (token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/save-score`, {
         wpm: finalWpm, rawWpm: finalRawWpm, consistency: calcConsistency, accuracy: finalAcc,
@@ -232,7 +235,6 @@ export default function TypingTest() {
         headers: { Authorization: token }
       }).catch(err => console.error("Failed to save score", err));
     } 
-    // 2. If NOT logged in, track as a guest for global stats
     else if (!token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/track-guest`, {
         wpm: finalWpm,
@@ -410,12 +412,9 @@ export default function TypingTest() {
 
         <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-sm font-bold" style={{ color: 'var(--sub-color)' }}>
           
-          {/* CONTACT BUTTON - Copies email to clipboard */}
+          {/* CONTACT BUTTON - Opens Modal */}
           <button 
-            onClick={() => {
-              navigator.clipboard.writeText('contact@typegiggle.com');
-              alert('Email copied to clipboard: contact@typegiggle.com');
-            }} 
+            onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
             style={{ color: 'var(--sub-color)' }}
           >
@@ -430,12 +429,9 @@ export default function TypingTest() {
             <FaDiscord size={16} /> discord
           </a>
 
-          {/* SUPPORT BUTTON - Copies email to clipboard */}
+          {/* SUPPORT BUTTON - Also opens Modal */}
           <button 
-            onClick={() => {
-              navigator.clipboard.writeText('support@typegiggle.com');
-              alert('Email copied to clipboard: support@typegiggle.com');
-            }} 
+            onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
             style={{ color: 'var(--sub-color)' }}
           >
@@ -452,6 +448,13 @@ export default function TypingTest() {
           © 2026 TypeGiggle. Built for fun.
         </p>
       </footer>
+
+      {/* Render the Modal */}
+      <ContactModal 
+        isOpen={isContactOpen} 
+        onClose={() => setIsContactOpen(false)} 
+      />
+      
     </div>
   );
 }

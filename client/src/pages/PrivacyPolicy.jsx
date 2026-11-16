@@ -1,6 +1,14 @@
+import SEO from '../components/SEO';
+
 export default function PrivacyPolicy() {
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 animate-fade-in" style={{ color: 'var(--text-color)' }}>
+      {/* Add the SEO component here */}
+      <SEO 
+        title="Privacy Policy" 
+        description="Read the TypeGiggle Privacy Policy to understand how we handle your data, cookies, and log files." 
+      />
+      
       <h1 className="text-4xl font-bold mb-8" style={{ color: 'var(--main-color)' }}>Privacy Policy</h1>
       <div className="space-y-4 opacity-80 leading-relaxed">
         <p>Last updated: November 2026</p>

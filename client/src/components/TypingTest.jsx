@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef, useContext } from 'react';
+import { useState, useEffect, useRef, useContext, lazy, Suspense } from 'react';
 import { commonWords, punctuation, numbers } from '../data/words';
 import { quotes } from '../data/quotes';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { RotateCcw, Mail, Heart, Shield } from 'lucide-react';
 import { FaDiscord, FaXTwitter } from 'react-icons/fa6';
 import SEO from './SEO';
 import ContactModal from './ContactModal';
+
+// Lazy-load the chart so it doesn't block the initial page load
+const WpmChart = lazy(() => import('./WpmChart'));
 
 export default function TypingTest() {
   const { token } = useContext(AuthContext);
@@ -38,7 +40,6 @@ export default function TypingTest() {
   const [wpmHistory, setWpmHistory] = useState([]);
   const [zenTimeElapsed, setZenTimeElapsed] = useState(0);
 
-  // State for the modal
   const [isContactOpen, setIsContactOpen] = useState(false);
 
   const inputRef = useRef(null);
@@ -227,7 +228,6 @@ export default function TypingTest() {
     }
     setConsistency(calcConsistency);
 
-    // 1. If logged in, save score normally
     if (token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/save-score`, {
         wpm: finalWpm, rawWpm: finalRawWpm, consistency: calcConsistency, accuracy: finalAcc,
@@ -236,7 +236,6 @@ export default function TypingTest() {
         headers: { Authorization: token }
       }).catch(err => console.error("Failed to save score", err));
     } 
-    // 2. If NOT logged in, track as a guest for global stats
     else if (!token && finalWpm > 0) {
       axios.post(`${import.meta.env.VITE_API_URL}/api/auth/track-guest`, {
         wpm: finalWpm,
@@ -278,6 +277,9 @@ export default function TypingTest() {
   return (
     <div className="w-full max-w-4xl z-10 px-4 md:px-0">
       <SEO title="Typing Speed Test" description="Test your WPM and accuracy with TypeGiggle." />
+      
+      {/* Visually hidden H1 for SEO and Accessibility */}
+      <h1 className="sr-only">Free Online Typing Test and WPM Tracker</h1>
       
       {/* Configuration Bar */}
       {!showResults && mode !== 'custom' && (
@@ -387,19 +389,10 @@ export default function TypingTest() {
             </button>
           </div>
 
-          <div className="w-full h-[250px] md:h-[300px] mb-12 px-4 md:px-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={wpmHistory}>
-                <XAxis dataKey="time" stroke="var(--sub-color)" tick={{fill: 'var(--sub-color)', fontSize: 12}} axisLine={false} tickLine={false} />
-                <YAxis stroke="var(--sub-color)" tick={{fill: 'var(--sub-color)', fontSize: 12}} domain={[0, 'dataMax + 20']} axisLine={false} tickLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-color)', borderColor: 'var(--main-color)', borderRadius: '8px', color: 'var(--text-color)' }}
-                  itemStyle={{ color: 'var(--main-color)' }}
-                />
-                <Line type="monotone" dataKey="wpm" stroke="var(--main-color)" strokeWidth={3} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {/* Lazy-loaded Chart */}
+          <Suspense fallback={<div className="h-[250px] md:h-[300px] mb-12 flex items-center justify-center text-[var(--sub-color)]">Loading chart...</div>}>
+            <WpmChart wpmHistory={wpmHistory} />
+          </Suspense>
         </div>
       )}
 
@@ -414,7 +407,6 @@ export default function TypingTest() {
 
         <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-sm font-bold" style={{ color: 'var(--sub-color)' }}>
           
-          {/* CONTACT BUTTON - Opens Modal */}
           <button 
             onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
@@ -430,7 +422,6 @@ export default function TypingTest() {
             <FaDiscord size={16} /> discord
           </a>
 
-          {/* SUPPORT BUTTON - Also opens Modal */}
           <button 
             onClick={() => setIsContactOpen(true)} 
             className="hover:text-[var(--main-color)] transition-colors flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 font-bold"
@@ -449,7 +440,6 @@ export default function TypingTest() {
         </p>
       </footer>
 
-      {/* Render the Modal */}
       <ContactModal 
         isOpen={isContactOpen} 
         onClose={() => setIsContactOpen(false)} 

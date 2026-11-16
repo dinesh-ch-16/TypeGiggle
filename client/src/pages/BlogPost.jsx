@@ -15,7 +15,6 @@ export default function BlogPost() {
   const [otherPosts, setOtherPosts] = useState([]);
 
   useEffect(() => {
-    // THE FIX: Scroll to top instantly when the slug changes
     window.scrollTo(0, 0);
 
     const modules = import.meta.glob('../blog/*.md', { query: '?raw', import: 'default', eager: true });
@@ -66,7 +65,6 @@ export default function BlogPost() {
       setContent(parsedContent);
       setMeta(parsedMeta);
 
-      // Load other posts
       const allPosts = Object.entries(modules).map(([p, raw]) => {
         const postSlug = p.replace('../blog/', '').replace('.md', '');
         const fmMatch = raw.match(frontmatterRegex);
@@ -126,9 +124,44 @@ export default function BlogPost() {
     </div>
   );
 
+  // 1. Structured Data Schema for Google Rich Snippets
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": meta.title,
+    "image": [heroImage],
+    "datePublished": meta.date,
+    "dateModified": meta.date,
+    "author": [{
+      "@type": "Organization",
+      "name": "TypeGiggle Team",
+      "url": "https://typegiggle.com"
+    }],
+    "publisher": {
+      "@type": "Organization",
+      "name": "TypeGiggle",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://typegiggle.com/typegiggle_logo.png"
+      }
+    },
+    "description": meta.excerpt
+  };
+
   return (
     <div className="w-full animate-fade-in pb-20">
-      <SEO title={meta.title || 'Blog Post'} description={meta.excerpt || ''} />
+      
+      {/* Inject the Structured Data here */}
+      <script type="application/ld+json">
+        {JSON.stringify(schemaData)}
+      </script>
+
+      {/* Pass image to SEO component for proper OG tags */}
+      <SEO 
+        title={meta.title || 'Blog Post'} 
+        description={meta.excerpt || ''} 
+        image={heroImage}
+      />
       
       {/* Editorial Header */}
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-16">

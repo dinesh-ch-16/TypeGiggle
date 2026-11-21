@@ -4,7 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 import sitemap from 'vite-plugin-sitemap'
 import generateRobotsTxt from 'vite-plugin-robots-txt'
 import fs from 'fs'
-import { defineConfig } from 'vite'
 import path from 'path'
 
 const getBlogRoutes = () => {
@@ -23,7 +22,6 @@ export default defineConfig({
     tailwindcss(),
     sitemap({
       hostname: 'https://typegiggle.com',
-
       dynamicRoutes: [
         '/leaderboard',
         '/custom',
@@ -32,7 +30,6 @@ export default defineConfig({
         '/privacy-policy',
         ...getBlogRoutes()
       ],
-
       priority: {
         '/': 1.0,
         '/blog': 0.8,

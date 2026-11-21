@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "spa-to-mpa build dist mpa-dist --routes routes.json",
     "preview": "vite preview"
   },
   "dependencies": {

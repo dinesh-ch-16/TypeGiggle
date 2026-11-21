@@ -13,6 +13,11 @@ import BlogPost from './pages/BlogPost';
 import ThemeModal from './components/ThemeModal';
 import { User, Palette } from 'lucide-react';
 
+// --- NEW IMPORTS FOR LANDING PAGES ---
+import OneMinuteTest from './pages/OneMinuteTest';
+import BeginnerTest from './pages/BeginnerTest';
+import WpmCalculator from './pages/WpmCalculator';
+
 function Navbar({ openThemeModal }) {
   const { user, logout } = useContext(AuthContext);
 
@@ -92,6 +97,11 @@ function App() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            
+            {/* NEW LANDING PAGE ROUTES */}
+            <Route path="/1-minute-typing-test" element={<OneMinuteTest />} />
+            <Route path="/typing-test-for-beginners" element={<BeginnerTest />} />
+            <Route path="/wpm-calculator" element={<WpmCalculator />} />
           </Routes>
         </main>
 

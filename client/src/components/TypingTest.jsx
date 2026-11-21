@@ -11,7 +11,7 @@ import ContactModal from './ContactModal';
 // Lazy-load the chart so it doesn't block the initial page load
 const WpmChart = lazy(() => import('./WpmChart'));
 
-export default function TypingTest() {
+export default function TypingTest({ defaultTime = 15 }) { // Accept defaultTime prop
   const { token } = useContext(AuthContext);
   
   const customText = localStorage.getItem('customPracticeText');
@@ -20,12 +20,12 @@ export default function TypingTest() {
 
   const [mode, setMode] = useState('time'); 
   const [config, setConfig] = useState({ 
-    time: isCustom ? parseInt(customTime) : 15, 
+    time: isCustom ? parseInt(customTime) : defaultTime, // Use defaultTime
     punctuation: false, 
     numbers: false 
   });
   
-  const [timeLeft, setTimeLeft] = useState(isCustom ? parseInt(customTime) : 15);
+  const [timeLeft, setTimeLeft] = useState(isCustom ? parseInt(customTime) : defaultTime); // Use defaultTime
   const [words, setWords] = useState(isCustom ? customText.split('') : []);
   const [typed, setTyped] = useState('');
   const [isActive, setIsActive] = useState(false);
@@ -56,7 +56,7 @@ export default function TypingTest() {
       localStorage.removeItem('customPracticeTime');
       setMode('custom');
     } else {
-      generateWords(15, false, false);
+      generateWords(defaultTime, false, false); // Pass defaultTime here
     }
     if (inputRef.current) inputRef.current.focus();
   }, []);

@@ -28,6 +28,9 @@ export default defineConfig({
         '/about',
         '/blog',
         '/privacy-policy',
+        '/1-minute-typing-test',
+        '/typing-test-for-beginners',
+        '/wpm-calculator',
         ...getBlogRoutes()
       ],
       priority: {
